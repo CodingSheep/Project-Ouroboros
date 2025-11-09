@@ -1,0 +1,229 @@
+/* ---------- Dark Mode Base ---------- */
+body {
+    background: #111;
+    color: #eee;
+    font-family: Inter, sans-serif;
+    padding: 18px;
+}
+
+h1 {
+    color: #00b3ff;
+    margin-bottom: 8px;
+}
+
+/* ---------- Dropzone ---------- */
+#dropzone {
+    border: 2px dashed #444;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    transition: background-color 0.2s, border-color 0.2s;
+    font-family: sans-serif;
+    color: #ccc;
+    background-color: #222;
+}
+
+#dropzone.hover {
+    background-color: #1a1a2e;
+    border-color: #00b3ff;
+}
+
+/* ---------- Playlist Tracks ---------- */
+#playlist {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.track {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background-color: #1a1a1a;
+    transition: background-color 0.2s, border-color 0.2s;
+    pointer-events: auto;
+    color: #eee;
+}
+
+.track.playing {
+    background: linear-gradient(90deg, #0b3d0b, #1a1a1a);
+}
+
+.track:hover {
+    background-color: #222;
+    border-color: #00b3ff;
+}
+
+/* Slider fixes */
+.track .progress {
+    width: 120px;
+    height: 12px;
+    padding: 0;
+    margin: 0 4px;
+    cursor: pointer;
+    background: #333;
+    border-radius: 6px;
+}
+
+.track .progress::-webkit-slider-thumb {
+    height: 16px;          /* larger thumb */
+    width: 16px;
+    background: #00b3ff;
+    border-radius: 50%;
+    margin-top: -2px;      /* vertical alignment */
+}
+
+.track .progress::-moz-range-thumb {
+    height: 16px;
+    width: 16px;
+    background: #00b3ff;
+    border-radius: 50%;
+    border: none;
+}
+
+
+/* ---------- Left Section (Drag handle + Track name) ---------- */
+.track .left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.drag-handle {
+    cursor: grab;
+    font-weight: bold;
+    user-select: none;
+    color: #ccc;
+}
+
+.track .name {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #eee;
+}
+
+/* ---------- Controls Section ---------- */
+.track .controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Buttons */
+button {
+    padding: 2px 6px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #222;
+    color: #eee;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+button:hover {
+    background-color: #333;
+    border-color: #00b3ff;
+}
+
+/* Loop button variations */
+.loop-on {
+    background-color: #3a5a7c;
+    color: #eee;
+}
+
+/* Progress slider */
+.progress {
+    width: 120px;
+}
+
+/* Time display */
+.time {
+    font-size: 0.8rem;
+    min-width: 60px;
+    text-align: right;
+}
+
+/* ---------- Global Controls ---------- */
+#volume {
+    vertical-align: middle;
+    margin-left: 5px;
+    margin-right: 15px;
+}
+#stopAll {
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+/* ---------- Playlist Selection ---------- */
+#playlistContainer {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#playlistContainer li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background-color: #1a1a1a;
+    transition: background-color 0.2s, border-color 0.2s;
+    color: #eee;
+}
+
+#playlistContainer li:hover {
+    background-color: #222;
+    border-color: #00b3ff;
+}
+
+.playlist-name {
+    flex: 1;
+    cursor: pointer;
+    color: #eee;
+    text-decoration: none;
+}
+
+/* Inline buttons for playlists */
+#playlistContainer button {
+    margin-left: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #222;
+    color: #eee;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+#playlistContainer button:hover {
+    background-color: #333;
+    border-color: #00b3ff;
+}
+
+#volumeLabel {
+    display: inline-block;
+    width: 40px;
+    text-align: right;
+}
+
+/* Optional responsive layout */
+@media (max-width: 500px) {
+    .track {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .track .controls {
+        margin-top: 5px;
+        flex-wrap: wrap;
+    }
+}

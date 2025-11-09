@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project Ouroboros</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Playlists</h1>
+    <button id="addPlaylistBtn">Add Playlist</button>
+    <ul id="playlistContainer">
+        {% for name, tracks in playlists.items() %}
+        <li data-name="{{ name }}">
+            <!-- Clicking the name opens the playlist -->
+            <span class="playlist-name">{{ name }}</span>
+
+            <!-- Rename button -->
+            <button class="renameBtn">Rename</button>
+
+            <!-- Delete button -->
+            <form action="{{ url_for('delete_playlist', name=name) }}" method="post" style="display:inline;">
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+
+    <script>
+        // Add playlist
+        document.getElementById('addPlaylistBtn').addEventListener('click', () => {
+            const name = prompt("Enter playlist name:");
+            if (!name)
+                return;
+            fetch("{{ url_for('add_playlist') }}", {
+                method: 'POST',
+                headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                body: `name=${encodeURIComponent(name)}`
+            }).then(() => location.reload());
+        });
+
+        // Clicking the playlist name opens it
+        document.querySelectorAll('.playlist-name').forEach(el => {
+            el.addEventListener('click', () => {
+                const playlistName = el.parentElement.getAttribute('data-name');
+                window.location.href = `/playlist/${encodeURIComponent(playlistName)}`;
+            });
+        });
+
+        // Rename button click
+        document.querySelectorAll('.renameBtn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const li = btn.parentElement;
+                const oldName = li.getAttribute('data-name');
+                const newName = prompt("Enter new playlist name:", oldName);
+                if (!newName || newName === oldName)
+                    return;
+                fetch(`/playlist/rename/${encodeURIComponent(oldName)}`, {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                    body: `name=${encodeURIComponent(newName)}`
+                }).then(() => location.reload());
+            });
+        });
+    </script>
+</body>
+</htm

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Project Ouroboros</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <h1>Music Player</h1>
+
+    <div style="margin-bottom: 10px;">
+        <a href="{{ url_for('playlists') }}">
+            <button id="backToPlaylists">← Back to Playlists</button>
+        </a>
+    </div>
+
+    <!-- Drag & Drop / File Selection -->
+    <div id="dropzone" style="border:2px dashed #aaa; padding:20px; text-align:center; margin-bottom:10px;">
+        Drag audio files here or <button id="openFiles">Browse Files</button>
+    </div>
+    <input type="file" id="fileInput" multiple accept="audio/*" style="display:none;" />
+
+    <!-- Global Controls -->
+    <div style="margin-bottom:10px;">
+        Volume: <span id="volumeLabel">100%</span><input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+        <button id="savePlaylist" type="button">Save Playlist</button>
+        <button id="stopAll" type="button">Stop All</button>
+    </div>
+
+    <!-- Playlist Container -->
+    <div id="playlist"></div>
+
+    <script>
+        const playlistName = "{{ playlist_name }}";
+        const initialTracks = {{ tracks | tojson | safe }};
+    </script>
+
+    <!-- JS Modules -->
+    <script type="module" src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/player.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/ui.js') }}"></script>
+</body>
+
+</html>
