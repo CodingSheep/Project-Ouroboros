@@ -1,19 +1,95 @@
 # Project Ouroboros
-A Locally Hosted Playlist Creator intended to be used to more easily play audio files without delay on tools such as Kenku FM.
 
-Frankly, Kenku FM's current implementation of its Playlists and Soundboards are insufficient for more dynamic music to be played during TTRPG sessions.
-As such, I'm building this tool to account for more custom audio file usage, allowing for less downtime between audio loops as well as allowing for a more seamless experience. This is to emulate adaptive/dynamic audio that you might hear in video game fights.
-Yes, the website is fairly barebones, but it works for the purposes of what I'd like to use it for.
+A self-hosted web playlist manager for playing custom audio files during TTRPG sessions, built with Flask.
 
-# Running the application
-- Create a Python virtual environment using a tool of your choosing (venv, Anaconda, etc) using the attached environment.yml file
-- Navigate to the project folder and run `flask run` or `python app.py`
-- Go to https://localhost:5000 and you're ready to go.
+Kenku FM's built-in playlists and soundboards lack the flexibility I need for more dynamic and adaptive music during combat encounters. Project Ouroboros fills that gap — allowing audio files to play in sequence with per-track loop control, simulating the kind of phase-transitioning music you'd hear in a video game boss fight.
 
-# Using the application
-- Create a playlist, then in the playlist, you can add audio files, reorder then, and choose whether you want individual ones to loop.
-- If a file is not set to loop, the application will automatically play the next in sequence until the playlist is finished.
-- Playlists are locally stored to a playlists.json, with audio files copied to a locally stored static/uploads folder.
+## Features
 
-# License
-This project is licensed using GPL-3. Please see LICENSE for more information.
+- **Playlist management** — create, rename, delete, and reorder playlists
+- **Track management** — drag and drop audio files (MP3) into a playlist, reorder via drag handle, remove individually
+- **Per-track loop control** — toggle "Repeat On/Off" per track, checked at the end of playback so it can be changed on the fly
+- **Sequential playback** — when a track ends on "Repeat Off", the next track plays automatically
+- **Volume control** — global volume slider, persisted per playlist
+- **Auto-save** — playlist state (order, loop settings, volume) saves automatically on any change
+- **Password-protected** — simple login wall, intended for personal/trusted use
+
+## How It Works
+
+Tracks play in sequence. When a track ends:
+- **Repeat On** → the track loops immediately with no delay
+- **Repeat Off** → the next track in the playlist starts automatically
+
+This allows pre-edited audio files (e.g. fight intro → fight loop → fight end) to chain together seamlessly, emulating adaptive audio from video games without needing a full middleware solution.
+
+## Tech Stack
+
+- **Python 3.13** with [Flask](https://flask.palletsprojects.com/)
+- Vanilla JavaScript (no framework) for drag-sort, sequential playback, and loop logic
+- JSON file for playlist persistence, local filesystem for audio storage
+- Runs as a Docker container behind an nginx reverse proxy with Let's Encrypt HTTPS (This is not neccesary for personal setups. This is just what I use.)
+
+## Project Structure
+
+```
+app.py                  # Flask routes, auth, playlist CRUD, file upload, audio serving
+static/
+  css/style.css         # Styling
+  js/
+    player.js           # Audio playback logic (play, pause, stop, next, volume)
+    ui.js               # DOM/UI logic (drag-sort, file upload, auto-save)
+    utils.js            # Shared utilities (formatTime, reorderArrayByDom)
+  uploads/              # Audio files, organized by playlist name (gitignored)
+templates/
+  login.html            # Password login page
+  playlists.html        # Playlist list view
+  player.html           # Per-playlist player view
+playlists.json          # Playlist state (gitignored — user data)
+requirements.txt        # Python dependencies
+```
+
+## Running Locally
+
+### Prerequisites
+
+- Python 3.13+
+- pip
+
+### Setup
+
+```bash
+pip install -r requirements.txt
+```
+
+Create a `.env` file:
+
+```
+MUSIC_APP_PASSWORD=your-chosen-password
+FLASK_SECRET_KEY=your-secret-key
+```
+
+Run:
+
+```bash
+python app.py
+```
+
+Navigate to `http://localhost:5000`.
+
+## Deployment
+
+Intended to run as a Docker container behind an nginx reverse proxy. See `Dockerfile` and `compose.yaml` for deployment configuration. Audio files and playlist state are persisted via volume mounts and are not included in this repository.
+
+## Usage
+
+1. Log in with your configured password
+2. Create a playlist and give it a name
+3. Drag audio files onto the dropzone or use the file picker to add tracks
+4. Reorder tracks by dragging the `≡` handle
+5. Toggle **Repeat On/Off** per track to control looping behavior
+6. Press **Play** on the first track — playback chains automatically through the playlist
+7. Changes save automatically; press **Save Playlist** for an explicit confirmation
+
+## License
+
+This project is licensed under GPL-3.0. See [LICENSE](LICENSE) for details.

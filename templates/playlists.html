@@ -9,21 +9,17 @@
     <h1>Playlists</h1>
     <button id="addPlaylistBtn">Add Playlist</button>
     <ul id="playlistContainer">
-        {% for name, tracks in playlists.items() %}
-        <li data-name="{{ name }}">
-            <!-- Clicking the name opens the playlist -->
-            <span class="playlist-name">{{ name }}</span>
-
-            <!-- Rename button -->
-            <button class="renameBtn">Rename</button>
-
-            <!-- Delete button -->
-            <form action="{{ url_for('delete_playlist', name=name) }}" method="post" style="display:inline;">
-                <button type="submit">Delete</button>
-            </form>
-        </li>
-        {% endfor %}
-    </ul>
+    {% for name, playlist in playlists.items() %}
+    <li data-name="{{ name }}" draggable="false">
+        <span class="drag-handle">≡</span>
+        <span class="playlist-name">{{ name }}</span>
+        <button class="renameBtn">Rename</button>
+        <form action="{{ url_for('delete_playlist', name=name) }}" method="post" style="display:inline;">
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
 
     <script>
         // Add playlist
@@ -61,6 +57,45 @@
                 }).then(() => location.reload());
             });
         });
+
+        // Drag handle + sorting (same pattern as track sorting)
+        document.querySelectorAll('.drag-handle').forEach(handle => {
+            handle.addEventListener('mousedown', () => handle.parentElement.draggable = true);
+            handle.addEventListener('dragend', () => handle.parentElement.draggable = false);
+        });
+
+        const container = document.getElementById('playlistContainer');
+        let dragging = null;
+
+        container.querySelectorAll('li').forEach(item => {
+            item.addEventListener('dragstart', e => {
+                dragging = item;
+                e.dataTransfer.setData('text/plain', 'drag');
+                item.style.opacity = '0.6';
+            });
+            item.addEventListener('dragover', e => e.preventDefault());
+            item.addEventListener('drop', e => {
+                e.preventDefault();
+                if (!dragging || dragging === item) return;
+                const rect = item.getBoundingClientRect();
+                const before = (e.clientY - rect.top) < rect.height / 2;
+                container.insertBefore(dragging, before ? item : item.nextSibling);
+                saveOrder();
+            });
+            item.addEventListener('dragend', () => {
+                item.style.opacity = '';
+                dragging = null;
+            });
+        });
+
+        function saveOrder() {
+            const order = Array.from(container.querySelectorAll('li')).map(li => li.getAttribute('data-name'));
+            fetch('/playlist/reorder', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({order})
+            });
+        }
     </script>
 </body>
 </htm

@@ -1,0 +1,19 @@
+networks:
+  foundry-net:
+    external: true
+
+services:
+  music-player:
+    build: .
+    container_name: music-player
+    restart: unless-stopped
+    expose:
+      - "5000"
+    environment:
+      - MUSIC_APP_PASSWORD=${MUSIC_APP_PASSWORD}
+      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+    volumes:
+      - ./static/uploads:/app/static/uploads
+      - ./playlists.json:/app/playlists.json
+    networks:
+      - foundry-net

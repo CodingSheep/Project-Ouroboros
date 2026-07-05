@@ -1,3 +1,22 @@
-.git
+# Environment & secrets
+.env
+
+# User data (never commit uploads or playlist state)
 playlists.json
-static/uploads
+static/uploads/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+venv/
+.venv/
+env/
+
+# Conda (if anyone uses environment.yml path)
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db

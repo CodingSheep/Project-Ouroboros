@@ -94,6 +94,7 @@ h1 {
 }
 
 .drag-handle {
+    margin-right: 8px;
     cursor: grab;
     font-weight: bold;
     user-select: none;
@@ -195,7 +196,7 @@ button:hover {
 
 /* Inline buttons for playlists */
 #playlistContainer button {
-    margin-left: 8px;
+    margin-right: 8px;
     padding: 4px 8px;
     border-radius: 4px;
     border: 1px solid #555;

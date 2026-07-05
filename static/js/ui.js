@@ -2,6 +2,13 @@
 import { tracks, createTrack, playTrack, pauseTrack, stopAll, nextTrack, updateVolume } from './player.js';
 import { formatTime, reorderArrayByDom } from './utils.js';
 
+// Autosave Functionality
+let autoSaveTimeout = null;
+function autoSave() {
+    clearTimeout(autoSaveTimeout);
+    autoSaveTimeout = setTimeout(savePlaylist, 500);
+}
+
 const dropzone = document.getElementById('dropzone');
 const playlist = document.getElementById('playlist');
 const volumeSlider = document.getElementById('volume');
@@ -12,10 +19,16 @@ const saveBtn = document.getElementById('savePlaylist');
 
 const loadedTrackNames = new Set();
 
+
 // Initialization
 if (typeof initialTracks !== 'undefined') {
     initialTracks.forEach(trackData => addTrackFromData(trackData));
 }
+
+if (typeof initialVolume !== 'undefined') {
+    volumeSlider.value = initialVolume;
+}
+updateVolume(parseFloat(volumeSlider.value));
 
 // Global Controls
 volumeSlider.addEventListener('input', () => {
@@ -27,7 +40,7 @@ volumeLabel.textContent = `${Math.round(volumeSlider.value * 100)}%`;
 
 stopAllBtn.addEventListener('click', stopAll);
 saveBtn.addEventListener('click', () => {
-    savePlaylist();
+    savePlaylist(true);
 });
 
 // Drag and Drop
@@ -71,7 +84,13 @@ dropzone.addEventListener('drop', e => {
 });
 
 // Click-to-open File Picker
-openFilesBtn.addEventListener('click', () => fileInput.click());
+loopBtn.addEventListener('click', () => {
+    track.audio.loop = !track.audio.loop;
+    loopBtn.textContent = track.audio.loop ? 'Repeat On' : 'Repeat Off';
+    loopBtn.className = track.audio.loop ? 'loop-on' : 'loop-off';
+    autoSave();
+});
+
 fileInput.addEventListener('change', () => {
     for (const f of fileInput.files)
         addTrackFromData({ file: f, name: f.name, loop: false });
@@ -138,17 +157,12 @@ function addTrackFromData(trackData) {
     removeBtn.addEventListener('click', () => {
         track.audio.pause();
         track.audio.currentTime = 0;
-
-        if (file)
-            URL.revokeObjectURL(track.url);
-
+        if (file) URL.revokeObjectURL(track.url);
         playlist.removeChild(div);
         const idx = tracks.indexOf(track);
-
-        if (idx > -1)
-            tracks.splice(idx, 1);
-
+        if (idx > -1) tracks.splice(idx, 1);
         loadedTrackNames.delete(trackData.name);
+        autoSave();
     });
 
     // Time/Progress
@@ -193,6 +207,7 @@ function addTrackFromData(trackData) {
 
     tracks.push(track);
     enableDragSorting();
+    autoSave();
 }
 
 // Drag Sorting
@@ -265,6 +280,7 @@ function enableDragSorting() {
             playlist.insertBefore(dragging, offset > half ? target.nextSibling : target);
 
         reorderArrayByDom(tracks, nodes, t => t.el);
+        autoSave();
     }
 
     function onDragEnd() {
@@ -278,20 +294,20 @@ function enableDragSorting() {
 }
 
 // ---------- Save Playlist ----------
-async function savePlaylist() {
+async function savePlaylist(showAlert = false) {
     const formData = new FormData();
     const tracksData = tracks.map(t => ({
         name: t.name,
         loop: t.audio.loop,
-        url: t.url // keep existing URL if already uploaded
+        url: t.url
     }));
 
-    // Attach any new files
     tracks.forEach(t => {
         if (t.file) formData.append(`file-${t.name}`, t.file);
     });
 
     formData.append('tracks', JSON.stringify(tracksData));
+    formData.append('volume', volumeSlider.value);
 
     const resp = await fetch(`/playlist/save/${playlistName}`, {
         method: 'POST',
@@ -299,9 +315,9 @@ async function savePlaylist() {
     });
 
     const data = await resp.json();
-    if (data.success)
-        alert('Playlist saved!');
-    else
-        alert('Error saving playlist');
+    if (showAlert) {
+        if (data.success) alert('Playlist saved!');
+        else alert('Error saving playlist');
+    }
 }
 
