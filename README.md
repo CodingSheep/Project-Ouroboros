@@ -1,6 +1,6 @@
 # Project Ouroboros
 
-A self-hosted web playlist manager for playing custom audio files during TTRPG sessions, built with Flask.
+A self-hosted web playlist manager for playing custom audio files during TTRPG sessions, built with Django.
 
 Kenku FM's built-in playlists and soundboards lack the flexibility I need for more dynamic and adaptive music during combat encounters. Project Ouroboros fills that gap — allowing audio files to play in sequence with per-track loop control, simulating the kind of phase-transitioning music you'd hear in a video game boss fight.
 
