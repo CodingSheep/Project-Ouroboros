@@ -1,0 +1,8 @@
+<form id="name-form" class="name-form" hx-post="{{ action }}" hx-target="#tree">
+    <label for="name-input">{{ label }}</label>
+    <input id="name-input" name="name" value="{{ name }}" maxlength="200" required autocomplete="off" autofocus>
+    {% if parent %}<input type="hidden" name="parent" value="{{ parent.pk }}">{% endif %}
+    <button type="submit">Save</button>
+    <button type="button" class="cancel">Cancel</button>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+</form>

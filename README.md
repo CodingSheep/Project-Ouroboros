@@ -37,7 +37,7 @@ This allows pre-edited audio files (e.g. fight intro → fight loop → fight en
 |---|---|
 | 1. Foundation: models (nested folders, playlists, tracks), admin, login, protected audio | ✅ |
 | 2. Import from the Flask app's `playlists.json` + uploads | ✅ |
-| 3. Library page: folder tree, drag to reorder/move | ⏳ |
+| 3. Library page: folder tree, create/rename/delete, drag to reorder/move | ✅ |
 | 4. Player page | ⏳ |
 | 5. Cutover to production | ⏳ |
 
@@ -67,9 +67,9 @@ library/                # The app
   models.py             # Folder (nested via parent), Playlist, Track (+ file cleanup)
   admin.py              # Admin site for folders, playlists and tracks
   management/commands/import_flask.py  # One-time import from the Flask app
-  views.py              # Library page, login-protected audio (X-Accel-Redirect)
+  views.py              # Library page (tree, create/rename/delete/move), login-protected audio
   templates/library/    # Library templates
-  static/library/       # CSS (and later htmx, SortableJS, player JS)
+  static/library/       # CSS, library.js (drag/drop, forms), vendor/ (htmx 2.0.11, SortableJS 1.15.7)
   tests.py
 templates/              # base.html, login page
 data/                   # db.sqlite3 + media/ (gitignored)

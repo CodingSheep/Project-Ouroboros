@@ -112,7 +112,7 @@ class ViewTests(TempMediaMixin, TestCase):
         resp = self.client.post(reverse("login"), {"username": "gm", "password": "a-long-test-password"})
         self.assertRedirects(resp, reverse("library:home"))
         html = self.client.get(reverse("library:home")).content.decode()
-        for text in ("Adrift in Time", "Arc 1", "Taifu Clan", "Loose Playlist", "1 tracks"):
+        for text in ("Adrift in Time", "Arc 1", "Taifu Clan", "Loose Playlist", "1 track"):
             self.assertIn(text, html)
         self.assertLess(html.index("Adrift in Time"), html.index("Arc 1"))
         self.assertLess(html.index("Arc 1"), html.index("Taifu Clan"))
@@ -224,3 +224,99 @@ class ImportFlaskTests(TempMediaMixin, TestCase):
         with self.assertRaises(CommandError):
             self.run_import("--apply")
         self.assertFalse(Playlist.objects.exists())
+
+
+class LibraryEditTests(TempMediaMixin, TestCase):
+    """Create, rename, delete and move from the library page."""
+
+    def setUp(self):
+        super().setUp()
+        self.user = get_user_model().objects.create_user("gm", password="a-long-test-password")
+        self.client.force_login(self.user)
+        self.campaign = Folder.objects.create(name="Campaign")
+        self.arc = Folder.objects.create(name="Arc", parent=self.campaign)
+        self.a = Playlist.objects.create(name="A", folder=self.campaign)
+        self.b = Playlist.objects.create(name="B", folder=self.campaign)
+
+    def post(self, view, *args, **data):
+        return self.client.post(reverse(f"library:{view}", args=args), data)
+
+    def test_everything_needs_login(self):
+        self.client.logout()
+        urls = [reverse("library:tree"), reverse("library:move"),
+                reverse("library:create", args=["folder"]),
+                reverse("library:rename", args=["folder", self.arc.pk]),
+                reverse("library:delete", args=["folder", self.arc.pk])]
+        for url in urls:
+            self.assertEqual(self.client.post(url).status_code, 302, url)
+        self.assertTrue(Folder.objects.filter(pk=self.arc.pk).exists())
+
+    def test_create_folder_subfolder_and_playlist(self):
+        self.post("create", "folder", name="  New Campaign  ")
+        self.post("create", "folder", name="Arc 2", parent=self.campaign.pk)
+        resp = self.post("create", "playlist", name="Boss", parent=self.arc.pk)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(Folder.objects.filter(name="New Campaign", parent=None).exists())
+        self.assertEqual([f.name for f in self.campaign.children.all()], ["Arc", "Arc 2"])
+        self.assertTrue(self.arc.playlists.filter(name="Boss").exists())
+        self.assertContains(resp, "Boss")   # the refreshed tree comes back
+
+    def test_form_is_served_and_blank_names_are_refused(self):
+        resp = self.client.get(reverse("library:create", args=["playlist"]), {"parent": self.arc.pk})
+        self.assertContains(resp, 'name="parent" value="%d"' % self.arc.pk)
+        resp = self.post("create", "folder", name="   ")
+        self.assertContains(resp, "Enter a name.")
+        self.assertEqual(resp["HX-Retarget"], "#name-form")
+        self.assertEqual(Folder.objects.count(), 2)
+
+    def test_rename(self):
+        self.post("rename", "folder", self.arc.pk, name="Arc One")
+        self.post("rename", "playlist", self.a.pk, name="Alpha")
+        self.arc.refresh_from_db(); self.a.refresh_from_db()
+        self.assertEqual((self.arc.name, self.a.name), ("Arc One", "Alpha"))
+
+    def test_unknown_kind_is_404_and_get_cannot_delete(self):
+        self.assertEqual(self.post("create", "track", name="x").status_code, 404)
+        self.assertEqual(self.client.get(reverse("library:delete", args=["folder", self.arc.pk])).status_code, 405)
+
+    def test_delete_folder_removes_everything_inside_with_files(self):
+        inner = Playlist.objects.create(name="Inner", folder=self.arc)
+        path = Path(self.make_track(inner).file.path)
+        self.post("delete", "folder", self.campaign.pk)
+        self.assertFalse(Folder.objects.exists() or Playlist.objects.exists())
+        self.assertFalse(path.exists())
+
+    def test_delete_warning_counts_everything_inside(self):
+        inner = Playlist.objects.create(name="Inner", folder=self.arc)
+        self.make_track(inner); self.make_track(self.a)
+        html = self.client.get(reverse("library:home")).content.decode()
+        self.assertIn("3 playlists and 2 tracks", html)
+
+    def test_reorder_playlists_within_a_folder(self):
+        self.post("move", kind="playlist", id=self.b.pk, parent=self.campaign.pk, order=f"{self.b.pk},{self.a.pk}")
+        self.assertEqual([p.name for p in self.campaign.playlists.all()], ["B", "A"])
+
+    def test_move_playlist_into_another_folder_at_a_position(self):
+        c = Playlist.objects.create(name="C", folder=self.arc)
+        self.post("move", kind="playlist", id=self.a.pk, parent=self.arc.pk, order=f"{self.a.pk},{c.pk}")
+        self.assertEqual([p.name for p in self.arc.playlists.all()], ["A", "C"])
+        self.assertEqual([p.name for p in self.campaign.playlists.all()], ["B"])
+
+    def test_move_to_top_level_and_folder_into_folder(self):
+        self.post("move", kind="playlist", id=self.a.pk, parent="", order=str(self.a.pk))
+        self.a.refresh_from_db()
+        self.assertIsNone(self.a.folder)
+        other = Folder.objects.create(name="Other")
+        self.post("move", kind="folder", id=other.pk, parent=self.arc.pk, order=str(other.pk))
+        self.assertEqual(other.__class__.objects.get(pk=other.pk).path(), "Campaign / Arc / Other")
+
+    def test_folder_cannot_be_moved_into_its_own_subfolder(self):
+        resp = self.post("move", kind="folder", id=self.campaign.pk, parent=self.arc.pk, order=str(self.campaign.pk))
+        self.assertEqual(resp.status_code, 400)
+        self.campaign.refresh_from_db()
+        self.assertIsNone(self.campaign.parent)
+
+    def test_page_loads_the_scripts(self):
+        html = self.client.get(reverse("library:home")).content.decode()
+        for name in ("htmx.min.js", "Sortable.min.js", "library.js", "X-CSRFToken"):
+            self.assertIn(name, html)

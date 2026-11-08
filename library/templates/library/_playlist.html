@@ -1,0 +1,13 @@
+<li class="playlist" data-id="{{ p.pk }}">
+    <div class="row">
+        <span class="handle" title="Drag to move">≡</span>
+        <span class="name">{{ p.name }}</span>
+        <span class="count">{{ p.track_count }} track{{ p.track_count|pluralize }}</span>
+        <span class="actions">
+            <button hx-get="{% url 'library:rename' 'playlist' p.pk %}" hx-target="next .slot">Rename</button>
+            <button class="danger" hx-post="{% url 'library:delete' 'playlist' p.pk %}" hx-target="#tree"
+                hx-confirm="Delete the playlist “{{ p.name }}”{% if p.track_count %} and its {{ p.track_count }} track{{ p.track_count|pluralize }} (audio files included){% endif %}?">Delete</button>
+        </span>
+    </div>
+    <div class="slot"></div>
+</li>

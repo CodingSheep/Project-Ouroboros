@@ -1,0 +1,7 @@
+{% if not folders and not loose %}<p class="note">Nothing here yet. Start with + Folder.</p>{% endif %}
+<ul class="tree sort folders" data-kind="folder" data-parent="">
+    {% for node in folders %}{% include "library/_folder.html" %}{% endfor %}
+</ul>
+<ul class="tree sort playlists" data-kind="playlist" data-parent="">
+    {% for p in loose %}{% include "library/_playlist.html" %}{% endfor %}
+</ul>

@@ -1,9 +1,26 @@
-<li class="folder">
-    <details open>
-        <summary>{{ node.folder.name }}</summary>
-        <ul>
+{% with f=node.folder %}
+<li class="folder" data-id="{{ f.pk }}">
+    <div class="row">
+        <span class="handle" title="Drag to move">≡</span>
+        <button type="button" class="toggle" aria-label="Open or close">▾</button>
+        <span class="name">{{ f.name }}</span>
+        <span class="count">{{ node.n_playlists }} playlist{{ node.n_playlists|pluralize }}</span>
+        <span class="actions">
+            <button hx-get="{% url 'library:create' 'folder' %}?parent={{ f.pk }}" hx-target="next .slot">+ Folder</button>
+            <button hx-get="{% url 'library:create' 'playlist' %}?parent={{ f.pk }}" hx-target="next .slot">+ Playlist</button>
+            <button hx-get="{% url 'library:rename' 'folder' f.pk %}" hx-target="next .slot">Rename</button>
+            <button class="danger" hx-post="{% url 'library:delete' 'folder' f.pk %}" hx-target="#tree"
+                hx-confirm="Delete the folder “{{ f.name }}”?{% if node.n_playlists or node.children %} Everything inside goes too: {{ node.n_playlists }} playlist{{ node.n_playlists|pluralize }} and {{ node.n_tracks }} track{{ node.n_tracks|pluralize }}, audio files included.{% endif %}">Delete</button>
+        </span>
+    </div>
+    <div class="slot"></div>
+    <div class="body">
+        <ul class="sort folders" data-kind="folder" data-parent="{{ f.pk }}">
             {% for node in node.children %}{% include "library/_folder.html" %}{% endfor %}
-            {% for p in node.playlists %}<li class="playlist">{{ p.name }} <span class="count">{{ p.track_count }} tracks</span></li>{% endfor %}
         </ul>
-    </details>
+        <ul class="sort playlists" data-kind="playlist" data-parent="{{ f.pk }}">
+            {% for p in node.playlists %}{% include "library/_playlist.html" %}{% endfor %}
+        </ul>
+    </div>
 </li>
+{% endwith %}

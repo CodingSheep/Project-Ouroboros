@@ -18,3 +18,31 @@ main { padding: 20px; max-width: 900px; }
 .tree summary { cursor: pointer; font-weight: 600; }
 .tree .playlist { padding: 2px 0; }
 .tree .count { color: var(--muted); font-size: 0.85em; margin-left: 6px; }
+
+/* Library page */
+.toolbar { display: flex; align-items: center; gap: 8px; }
+.toolbar h1 { margin: 0 12px 0 0; }
+.slot:empty { display: none; }
+.name-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 6px 0 6px 28px; padding: 8px;
+             background: var(--panel); border-radius: 4px; }
+.name-form input { flex: 1; min-width: 180px; padding: 4px 6px; background: var(--bg); color: var(--text);
+                   border: 1px solid #444; border-radius: 4px; }
+.name-form .error { flex-basis: 100%; margin: 0; }
+.tree, .tree ul { list-style: none; margin: 0; padding-left: 0; }
+.tree ul { padding-left: 22px; }
+.tree.playlists { margin-top: 4px; }
+.row { display: flex; align-items: center; gap: 6px; padding: 3px 4px; border-radius: 4px; }
+.row:hover { background: var(--panel); }
+.folder > .row .name { font-weight: 600; }
+.handle { cursor: grab; color: var(--muted); user-select: none; padding: 0 2px; }
+.toggle { border: none; background: none; padding: 0 2px; width: 1.2em; color: var(--muted); }
+.folder.closed > .row .toggle { transform: rotate(-90deg); }
+.folder.closed > .body { display: none; }
+.count { color: var(--muted); font-size: 0.85em; }
+.actions { margin-left: auto; display: flex; gap: 4px; opacity: 0; }
+.row:hover .actions, .row:focus-within .actions { opacity: 1; }
+.actions button { font-size: 0.8em; padding: 2px 8px; }
+button.danger:hover { border-color: var(--error); color: var(--error); }
+/* While dragging, show where things can go, including empty folders. */
+body.dragging-folder ul.folders, body.dragging-playlist ul.playlists { min-height: 1.6em; outline: 1px dashed #555; outline-offset: -2px; border-radius: 4px; }
+.sortable-ghost { opacity: 0.4; }

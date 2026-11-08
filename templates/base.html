@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Project Ouroboros{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'library/style.css' %}">
+    <script src="{% static 'library/vendor/htmx.min.js' %}" defer></script>
+    <script src="{% static 'library/vendor/Sortable.min.js' %}" defer></script>
+    <script src="{% static 'library/library.js' %}" defer></script>
 </head>
-<body>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <header class="topbar">
         <a class="brand" href="{% url 'library:home' %}">Project Ouroboros</a>
         {% if user.is_authenticated %}
