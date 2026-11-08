@@ -1,7 +1,7 @@
 <li class="playlist" data-id="{{ p.pk }}">
     <div class="row">
         <span class="handle" title="Drag to move">≡</span>
-        <span class="name">{{ p.name }}</span>
+        <a class="name" href="{% url 'library:player' p.pk %}">{{ p.name }}</a>
         <span class="count">{{ p.track_count }} track{{ p.track_count|pluralize }}</span>
         <span class="actions">
             <button hx-get="{% url 'library:rename' 'playlist' p.pk %}" hx-target="next .slot">Rename</button>

@@ -1,0 +1,10 @@
+<li class="track" data-id="{{ t.pk }}" data-url="{% url 'media' t.file.name %}" data-loop="{{ t.loop|yesno:'1,0' }}"
+    data-loop-url="{% url 'library:track_loop' t.pk %}" data-delete-url="{% url 'library:track_delete' t.pk %}">
+    <span class="handle" title="Drag to reorder">≡</span>
+    <span class="name" title="{{ t.name }}">{{ t.name }}</span>
+    <button type="button" class="play">Play</button>
+    <button type="button" class="loop">Repeat Off</button>
+    <input type="range" class="progress" min="0" max="1000" value="0" aria-label="Position">
+    <span class="time">0:00 / 0:00</span>
+    <button type="button" class="remove danger">Remove</button>
+</li>

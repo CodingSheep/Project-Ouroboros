@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ playlist.name }} · Project Ouroboros{% endblock %}
+{% block content %}
+<div id="player" data-upload-url="{% url 'library:upload' playlist.pk %}"
+     data-order-url="{% url 'library:track_order' playlist.pk %}"
+     data-volume-url="{% url 'library:volume' playlist.pk %}">
+    <p class="crumbs"><a href="{% url 'library:home' %}">← Library</a>{% if playlist.folder %} · {{ playlist.folder.path }}{% endif %}</p>
+    <h1>{{ playlist.name }}</h1>
+
+    <div class="controls-bar">
+        <label>Volume <input type="range" id="volume" min="0" max="1" step="0.01" value="{{ playlist.volume|stringformat:'.2f' }}"></label>
+        <span id="volume-label"></span>
+        <button type="button" id="stop-all">Stop all</button>
+        <span id="status" class="note" aria-live="polite"></span>
+    </div>
+
+    <ol id="tracks" class="tracks">
+        {% for t in tracks %}{% include "library/_track.html" %}{% endfor %}
+    </ol>
+
+    <div id="dropzone" class="dropzone">
+        Drop audio files here or <button type="button" id="browse">Browse files</button>
+        <input type="file" id="file-input" multiple accept="{{ accept }}" hidden>
+    </div>
+</div>
+<script src="{% static 'library/player.js' %}" defer></script>
+{% endblock %}

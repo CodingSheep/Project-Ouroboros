@@ -1,4 +1,5 @@
 import mimetypes
+import re
 from pathlib import Path
 from urllib.parse import quote
 
@@ -7,11 +8,12 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Count
-from django.http import FileResponse, Http404, HttpResponse, HttpResponseBadRequest
+from django.http import (FileResponse, Http404, HttpResponse, HttpResponseBadRequest,
+                         StreamingHttpResponse)
 from django.shortcuts import get_object_or_404, render
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .models import Folder, Playlist
+from .models import AUDIO_EXTENSIONS, Folder, Playlist, Track
 
 
 def build_tree() -> tuple[list[dict], list[Playlist]]:
@@ -186,4 +188,115 @@ def media(request, path: str):
         resp = HttpResponse(content_type=content_type)
         resp["X-Accel-Redirect"] = settings.MEDIA_ACCEL_PREFIX.rstrip("/") + "/" + quote(rel)
         return resp
-    return FileResponse(open(target, "rb"), content_type=content_type)
+    return file_response(request, target, content_type)
+
+
+RANGE_RE = re.compile(r"bytes=(\d*)-(\d*)")
+
+
+def file_response(request, path: Path, content_type: str):
+    """FileResponse plus single-range requests (206), so the player can seek
+    when Django serves the audio itself (development)."""
+    size = path.stat().st_size
+    m = RANGE_RE.fullmatch(request.headers.get("Range", "").strip())
+    if not m or not (m[1] or m[2]):
+        resp = FileResponse(open(path, "rb"), content_type=content_type)
+        resp["Accept-Ranges"] = "bytes"
+        return resp
+    if m[1]:
+        start, end = int(m[1]), int(m[2]) if m[2] else size - 1
+    else:   # "bytes=-500": the last 500 bytes
+        start, end = max(size - int(m[2]), 0), size - 1
+    end = min(end, size - 1)
+    if start > end:
+        resp = HttpResponse(status=416)
+        resp["Content-Range"] = f"bytes */{size}"
+        return resp
+    length = end - start + 1
+
+    def chunks():
+        with open(path, "rb") as f:
+            f.seek(start)
+            left = length
+            while left > 0:
+                data = f.read(min(65536, left))
+                if not data:
+                    break
+                left -= len(data)
+                yield data
+
+    resp = StreamingHttpResponse(chunks(), status=206, content_type=content_type)
+    resp["Content-Range"] = f"bytes {start}-{end}/{size}"
+    resp["Content-Length"] = str(length)
+    resp["Accept-Ranges"] = "bytes"
+    return resp
+
+
+# ---- Player page. Every change saves straight away (no Save button). ----
+
+@login_required
+def player(request, pk: int):
+    playlist = get_object_or_404(Playlist.objects.select_related("folder"), pk=pk)
+    return render(request, "library/player.html", {
+        "playlist": playlist,
+        "tracks": playlist.tracks.all(),
+        "accept": ",".join("." + ext for ext in AUDIO_EXTENSIONS),
+    })
+
+
+@login_required
+@require_POST
+def upload(request, pk: int):
+    """One audio file per request; returns its row for the player."""
+    playlist = get_object_or_404(Playlist, pk=pk)
+    f = request.FILES.get("file")
+    if f is None:
+        return HttpResponseBadRequest("No file sent.")
+    track = Track(playlist=playlist, name=Path(f.name).name[:255], file=f)
+    try:
+        track.full_clean(exclude=["position"])
+    except ValidationError as e:
+        return HttpResponseBadRequest(f"{f.name}: " + " ".join(e.messages))
+    track.save()
+    return render(request, "library/_track.html", {"t": track})
+
+
+@login_required
+@require_POST
+def track_loop(request, pk: int):
+    updated = Track.objects.filter(pk=pk).update(loop=request.POST.get("loop") == "1")
+    return HttpResponse(status=204) if updated else _404()
+
+
+@login_required
+@require_POST
+def track_delete(request, pk: int):
+    get_object_or_404(Track, pk=pk).delete()   # the file goes too (models.py)
+    return HttpResponse(status=204)
+
+
+@login_required
+@require_POST
+def track_order(request, pk: int):
+    playlist = get_object_or_404(Playlist, pk=pk)
+    try:
+        order = [int(x) for x in request.POST.get("order", "").split(",") if x]
+    except ValueError:
+        return HttpResponseBadRequest("Bad order.")
+    current = list(playlist.tracks.values_list("pk", flat=True))
+    ids = [t for t in dict.fromkeys(order) if t in current]
+    with transaction.atomic():
+        for position, t in enumerate(ids + [t for t in current if t not in ids]):
+            Track.objects.filter(pk=t).update(position=position)
+    return HttpResponse(status=204)
+
+
+@login_required
+@require_POST
+def playlist_volume(request, pk: int):
+    try:
+        volume = min(max(float(request.POST.get("volume", "")), 0.0), 1.0)
+    except ValueError:
+        return HttpResponseBadRequest("Bad volume.")
+    updated = Playlist.objects.filter(pk=pk).update(volume=volume)
+    return HttpResponse(status=204) if updated else _404()

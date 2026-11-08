@@ -50,3 +50,26 @@ body.dragging-playlist ul.playlists:not(:has(> li)) { min-height: 27px; outline:
 .is-dragged > .body { display: none; }
 .sortable-ghost { opacity: 0.4; }
 .sortable-fallback { opacity: 0.9; background: var(--panel); border-radius: 4px; }
+
+/* Player page */
+.crumbs { margin: 0 0 4px; color: var(--muted); }
+.crumbs + h1 { margin-top: 0; }
+.controls-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.controls-bar input[type=range] { vertical-align: middle; width: 200px; }
+#volume-label { min-width: 3em; color: var(--muted); }
+.tracks { list-style: none; padding: 0; margin: 0 0 12px; }
+.track { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 4px;
+         background: var(--panel); border-radius: 4px; border-left: 3px solid transparent; }
+.track .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.track .play { min-width: 4.5em; }
+.track .loop { min-width: 7.5em; }
+.track .loop.on { border-color: var(--accent); color: var(--accent); }
+.track .progress { width: 180px; }
+.track .time { min-width: 7.5em; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+.track.current { border-left-color: var(--muted); }
+.track.playing { border-left-color: var(--accent); }
+.dropzone { border: 2px dashed #555; border-radius: 6px; padding: 20px; text-align: center; color: var(--muted); }
+.dropzone.hover { border-color: var(--accent); color: var(--text); }
+main:has(#player) { max-width: 1100px; }
+.tree a.name { color: var(--text); text-decoration: none; }
+.tree a.name:hover { color: var(--accent); text-decoration: underline; }

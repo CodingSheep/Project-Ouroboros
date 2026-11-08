@@ -38,7 +38,7 @@ This allows pre-edited audio files (e.g. fight intro → fight loop → fight en
 | 1. Foundation: models (nested folders, playlists, tracks), admin, login, protected audio | ✅ |
 | 2. Import from the Flask app's `playlists.json` + uploads | ✅ |
 | 3. Library page: folder tree, create/rename/delete, drag to reorder/move | ✅ |
-| 4. Player page | ⏳ |
+| 4. Player page: playback, Repeat, volume, uploads, all saved as you go | ✅ |
 | 5. Cutover to production | ⏳ |
 
 ## Development
@@ -67,9 +67,9 @@ library/                # The app
   models.py             # Folder (nested via parent), Playlist, Track (+ file cleanup)
   admin.py              # Admin site for folders, playlists and tracks
   management/commands/import_flask.py  # One-time import from the Flask app
-  views.py              # Library page (tree, create/rename/delete/move), login-protected audio
+  views.py              # Library page, player endpoints, login-protected audio (with seeking)
   templates/library/    # Library templates
-  static/library/       # CSS, library.js (drag/drop, forms), vendor/ (htmx 2.0.11, SortableJS 1.15.7)
+  static/library/       # CSS, library.js (drag/drop, forms), player.js, vendor/ (htmx 2.0.11, SortableJS 1.15.7)
   tests.py
 templates/              # base.html, login page
 data/                   # db.sqlite3 + media/ (gitignored)
@@ -82,16 +82,12 @@ Runs as a Docker container behind an nginx reverse proxy (gunicorn, whitenoise f
 
 ## Usage
 
-*(Describes the Flask app; updated as the rewrite reaches each feature.)*
-
-
-1. Log in with your configured password
-2. Create a playlist and give it a name
-3. Drag audio files onto the dropzone or use the file picker to add tracks
-4. Reorder tracks by dragging the `≡` handle
-5. Toggle **Repeat On/Off** per track to control looping behavior
-6. Press **Play** on the first track — playback chains automatically through the playlist
-7. Changes save automatically; press **Save Playlist** for an explicit confirmation
+1. Log in with your Django account (`createsuperuser`, see Development)
+2. On the library page, make folders (**+ Folder**, or **+ Folder** on a folder for a subfolder) and playlists; drag the `≡` handle to reorder or move them
+3. Open a playlist and drop audio files onto the page (or **Browse files**); each uploads once, straight away
+4. Reorder tracks by dragging `≡`, and toggle **Repeat On/Off** per track
+5. Press **Play** on the first track; playback chains through the playlist, and a track with Repeat On loops until you turn it off
+6. Everything (order, Repeat, volume, removals) saves as you go; there is no Save button
 
 ## License
 

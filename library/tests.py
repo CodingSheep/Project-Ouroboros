@@ -320,3 +320,87 @@ class LibraryEditTests(TempMediaMixin, TestCase):
         html = self.client.get(reverse("library:home")).content.decode()
         for name in ("htmx.min.js", "Sortable.min.js", "library.js", "X-CSRFToken"):
             self.assertIn(name, html)
+
+
+class PlayerTests(TempMediaMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.user = get_user_model().objects.create_user("gm", password="a-long-test-password")
+        self.client.force_login(self.user)
+        self.playlist = Playlist.objects.create(name='Boss "Fight" & <Friends>')
+        self.t1 = self.make_track(self.playlist, name="Intro.mp3")
+        self.t2 = self.make_track(self.playlist, name="Loop.mp3", loop=True)
+
+    def url(self, name, pk):
+        return reverse(f"library:{name}", args=[pk])
+
+    def test_player_page_lists_tracks_in_order_with_names_escaped(self):
+        html = self.client.get(self.url("player", self.playlist.pk)).content.decode()
+        self.assertIn("Boss &quot;Fight&quot; &amp; &lt;Friends&gt;", html)
+        self.assertNotIn("<Friends>", html)
+        self.assertLess(html.index("Intro.mp3"), html.index("Loop.mp3"))
+        self.assertIn('data-loop="1"', html)
+        self.assertIn(reverse("media", args=[self.t1.file.name]), html)
+
+    def test_library_links_to_the_player(self):
+        html = self.client.get(reverse("library:home")).content.decode()
+        self.assertIn(self.url("player", self.playlist.pk), html)
+
+    def test_upload_adds_a_track_at_the_end_and_returns_its_row(self):
+        f = SimpleUploadedFile("New Song.MP3", b"ID3new")
+        resp = self.client.post(self.url("upload", self.playlist.pk), {"file": f})
+        self.assertEqual(resp.status_code, 200)
+        track = self.playlist.tracks.last()
+        self.assertEqual(track.name, "New Song.MP3")
+        self.assertRegex(track.file.name, r"^tracks/[0-9a-f]{32}\.mp3$")
+        self.assertContains(resp, f'data-id="{track.pk}"')
+
+    def test_upload_refuses_non_audio(self):
+        f = SimpleUploadedFile("notes.txt", b"hello")
+        resp = self.client.post(self.url("upload", self.playlist.pk), {"file": f})
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn(b"notes.txt", resp.content)
+        self.assertEqual(self.playlist.tracks.count(), 2)
+        self.assertFalse(any(Path(self.media_root).rglob("*.txt")))
+
+    def test_repeat_is_saved(self):
+        self.client.post(self.url("track_loop", self.t1.pk), {"loop": "1"})
+        self.client.post(self.url("track_loop", self.t2.pk), {"loop": "0"})
+        self.t1.refresh_from_db(); self.t2.refresh_from_db()
+        self.assertEqual((self.t1.loop, self.t2.loop), (True, False))
+
+    def test_reorder_and_volume_are_saved(self):
+        self.client.post(self.url("track_order", self.playlist.pk), {"order": f"{self.t2.pk},{self.t1.pk}"})
+        self.assertEqual([t.name for t in self.playlist.tracks.all()], ["Loop.mp3", "Intro.mp3"])
+        self.client.post(self.url("volume", self.playlist.pk), {"volume": "0.35"})
+        self.client.post(self.url("volume", self.playlist.pk), {"volume": "7"})   # clamped
+        self.playlist.refresh_from_db()
+        self.assertEqual(self.playlist.volume, 1.0)
+        self.assertEqual(self.client.post(self.url("volume", self.playlist.pk), {"volume": "x"}).status_code, 400)
+
+    def test_remove_deletes_the_track_and_file(self):
+        path = Path(self.t1.file.path)
+        self.assertEqual(self.client.post(self.url("track_delete", self.t1.pk)).status_code, 204)
+        self.assertFalse(Track.objects.filter(pk=self.t1.pk).exists())
+        self.assertFalse(path.exists())
+
+    def test_player_endpoints_need_login_and_post(self):
+        self.assertEqual(self.client.get(self.url("track_delete", self.t1.pk)).status_code, 405)
+        self.client.logout()
+        for name, pk in (("player", self.playlist.pk), ("upload", self.playlist.pk),
+                         ("track_loop", self.t1.pk), ("track_delete", self.t1.pk)):
+            self.assertEqual(self.client.post(self.url(name, pk)).status_code, 302, name)
+        self.assertTrue(Track.objects.filter(pk=self.t1.pk).exists())
+
+    def test_audio_supports_range_requests_for_seeking(self):
+        url = reverse("media", args=[self.t1.file.name])   # content: b"ID3fake-audio" (13 bytes)
+        resp = self.client.get(url, headers={"Range": "bytes=3-6"})
+        self.assertEqual(resp.status_code, 206)
+        self.assertEqual(b"".join(resp.streaming_content), b"fake")
+        self.assertEqual(resp["Content-Range"], "bytes 3-6/13")
+        resp = self.client.get(url, headers={"Range": "bytes=-5"})
+        self.assertEqual(b"".join(resp.streaming_content), b"audio")
+        resp = self.client.get(url, headers={"Range": "bytes=8-"})
+        self.assertEqual(b"".join(resp.streaming_content), b"audio")
+        self.assertEqual(self.client.get(url, headers={"Range": "bytes=50-"}).status_code, 416)
+        self.assertEqual(self.client.get(url)["Accept-Ranges"], "bytes")
