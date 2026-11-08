@@ -36,7 +36,7 @@ This allows pre-edited audio files (e.g. fight intro → fight loop → fight en
 | Phase | |
 |---|---|
 | 1. Foundation: models (nested folders, playlists, tracks), admin, login, protected audio | ✅ |
-| 2. Import from the Flask app's `playlists.json` + uploads | ⏳ |
+| 2. Import from the Flask app's `playlists.json` + uploads | ✅ |
 | 3. Library page: folder tree, drag to reorder/move | ⏳ |
 | 4. Player page | ⏳ |
 | 5. Cutover to production | ⏳ |
@@ -50,8 +50,12 @@ docker compose build music-next
 docker compose run --rm music-next python manage.py migrate
 docker compose run --rm music-next python manage.py createsuperuser
 docker compose up -d music-next  # http://localhost:8001
+docker compose run --rm music-next python manage.py import_flask          # show what the import would do
+docker compose run --rm music-next python manage.py import_flask --apply  # import playlists.json + static/uploads
 docker compose run --rm music-next python manage.py test
 ```
+
+The import turns "Campaign - Playlist" names into a Campaign folder, copies the audio (originals untouched), and skips playlists already imported, so it's safe to run again.
 
 Data lives in `data/` (`db.sqlite3`, `media/`), which is not in git.
 
@@ -62,6 +66,7 @@ config/                 # Django project: settings (from environment), URLs
 library/                # The app
   models.py             # Folder (nested via parent), Playlist, Track (+ file cleanup)
   admin.py              # Admin site for folders, playlists and tracks
+  management/commands/import_flask.py  # One-time import from the Flask app
   views.py              # Library page, login-protected audio (X-Accel-Redirect)
   templates/library/    # Library templates
   static/library/       # CSS (and later htmx, SortableJS, player JS)

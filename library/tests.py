@@ -135,3 +135,92 @@ class ViewTests(TempMediaMixin, TestCase):
         self.client.force_login(self.user)
         for path in ("../db.sqlite3", "tracks/../../etc/passwd", "tracks/missing.mp3"):
             self.assertEqual(self.client.get("/media/" + path).status_code, 404, path)
+
+
+class ImportFlaskTests(TempMediaMixin, TestCase):
+    """The import command, on a small copy of the old app's layout."""
+
+    def setUp(self):
+        super().setUp()
+        self.src = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.src, ignore_errors=True)
+        uploads = self.src / "uploads"
+        (uploads / "Taifu Clan").mkdir(parents=True)
+        (uploads / "Taifu Clan" / "Taifu Intro.mp3").write_bytes(b"intro")
+        (uploads / "Taifu Clan" / "Taifu Loop.mp3").write_bytes(b"loop")
+        (uploads / "Odd & Ends").mkdir()
+        (uploads / "Odd & Ends" / "Rain #1.mp3").write_bytes(b"rain")
+        (uploads / "Orphan").mkdir()
+        (uploads / "Orphan" / "unused.mp3").write_bytes(b"x")
+        self.uploads = uploads
+        self.write_json({
+            "Adrift in Time - Taifu Clan": {"volume": 0.55, "tracks": [
+                {"name": "Taifu Intro.mp3", "loop": False, "url": "/static/uploads/Taifu Clan/Taifu Intro.mp3"},
+                {"name": "Taifu Loop.mp3", "loop": True, "url": "/static/uploads/Taifu%20Clan/Taifu%20Loop.mp3"},
+            ]},
+            "Adrift in Time - Second": {"volume": 1.0, "tracks": []},
+            "Ambience": {"volume": 1.0, "tracks": [
+                {"name": "Rain #1.mp3", "loop": True, "url": "/static/uploads/Odd & Ends/Rain #1.mp3"},
+            ]},
+        })
+
+    def write_json(self, data):
+        import json
+        (self.src / "playlists.json").write_text(json.dumps(data))
+
+    def run_import(self, *extra):
+        from io import StringIO
+        from django.core.management import call_command
+        out = StringIO()
+        call_command("import_flask", "--json", str(self.src / "playlists.json"),
+                     "--uploads", str(self.uploads), *extra, stdout=out)
+        return out.getvalue()
+
+    def test_dry_run_writes_nothing(self):
+        out = self.run_import()
+        self.assertIn("Would import 1 folders, 3 playlists, 3 tracks", out)
+        self.assertFalse(Folder.objects.exists() or Playlist.objects.exists() or Track.objects.exists())
+        self.assertFalse(any(Path(self.media_root).rglob("*.mp3")))
+
+    def test_apply_builds_folders_playlists_and_tracks_in_order(self):
+        self.run_import("--apply")
+        campaign = Folder.objects.get()
+        self.assertEqual((campaign.name, campaign.parent), ("Adrift in Time", None))
+        self.assertEqual([p.name for p in campaign.playlists.all()], ["Taifu Clan", "Second"])
+        taifu = campaign.playlists.get(name="Taifu Clan")
+        self.assertEqual(taifu.volume, 0.55)
+        self.assertEqual([(t.name, t.loop) for t in taifu.tracks.all()],
+                         [("Taifu Intro.mp3", False), ("Taifu Loop.mp3", True)])
+        self.assertEqual(taifu.tracks.first().file.read(), b"intro")
+        loose = Playlist.objects.get(folder=None)
+        self.assertEqual(loose.name, "Ambience")
+        self.assertEqual(loose.tracks.get().file.read(), b"rain")
+
+    def test_files_are_copied_and_originals_kept(self):
+        self.run_import("--apply")
+        self.assertTrue((self.uploads / "Taifu Clan" / "Taifu Intro.mp3").exists())
+        self.assertEqual(len(list(Path(self.media_root).rglob("*.mp3"))), 3)   # orphan not copied
+
+    def test_running_again_skips_what_is_already_there(self):
+        self.run_import("--apply")
+        out = self.run_import("--apply")
+        self.assertIn("0 folders, 0 playlists, 0 tracks; 3 already imported", out)
+        self.assertEqual(Folder.objects.count(), 1)
+        self.assertEqual(Track.objects.count(), 3)
+
+    def test_a_missing_file_stops_the_import_before_anything_is_written(self):
+        from django.core.management.base import CommandError
+        (self.uploads / "Odd & Ends" / "Rain #1.mp3").unlink()
+        with self.assertRaises(CommandError):
+            self.run_import("--apply")
+        self.assertFalse(Playlist.objects.exists())
+        self.assertFalse(any(Path(self.media_root).rglob("*.mp3")))
+
+    def test_urls_outside_the_uploads_folder_are_refused(self):
+        from django.core.management.base import CommandError
+        (self.src / "secret.mp3").write_bytes(b"no")
+        self.write_json({"X": {"volume": 1, "tracks": [
+            {"name": "s", "loop": False, "url": "/static/uploads/../secret.mp3"}]}})
+        with self.assertRaises(CommandError):
+            self.run_import("--apply")
+        self.assertFalse(Playlist.objects.exists())
