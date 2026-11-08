@@ -58,55 +58,27 @@ Data lives in `data/` (`db.sqlite3`, `media/`), which is not in git.
 ## Project Structure
 
 ```
-app.py                  # Flask routes, auth, playlist CRUD, file upload, audio serving
-static/
-  css/style.css         # Styling
-  js/
-    player.js           # Audio playback logic (play, pause, stop, next, volume)
-    ui.js               # DOM/UI logic (drag-sort, file upload, auto-save)
-    utils.js            # Shared utilities (formatTime, reorderArrayByDom)
-  uploads/              # Audio files, organized by playlist name (gitignored)
-templates/
-  login.html            # Password login page
-  playlists.html        # Playlist list view
-  player.html           # Per-playlist player view
-playlists.json          # Playlist state (gitignored — user data)
-requirements.txt        # Python dependencies
+config/                 # Django project: settings (from environment), URLs
+library/                # The app
+  models.py             # Folder (nested via parent), Playlist, Track (+ file cleanup)
+  admin.py              # Admin site for folders, playlists and tracks
+  views.py              # Library page, login-protected audio (X-Accel-Redirect)
+  templates/library/    # Library templates
+  static/library/       # CSS (and later htmx, SortableJS, player JS)
+  tests.py
+templates/              # base.html, login page
+data/                   # db.sqlite3 + media/ (gitignored)
+compose.yaml            # music-next (Django, dev) + music-player (old Flask app until cutover)
 ```
-
-## Running Locally
-
-### Prerequisites
-
-- Python 3.13+
-- pip
-
-### Setup
-
-```bash
-pip install -r requirements.txt
-```
-
-Create a `.env` file:
-
-```
-MUSIC_APP_PASSWORD=your-chosen-password
-FLASK_SECRET_KEY=your-secret-key
-```
-
-Run:
-
-```bash
-python app.py
-```
-
-Navigate to `http://localhost:5000`.
 
 ## Deployment
 
-Intended to run as a Docker container behind an nginx reverse proxy. See `Dockerfile` and `compose.yaml` for deployment configuration. Audio files and playlist state are persisted via volume mounts and are not included in this repository.
+Runs as a Docker container behind an nginx reverse proxy (gunicorn, whitenoise for CSS/JS). `data/` is mounted as a volume and isn't in this repository. Production settings come from environment variables: `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and `MEDIA_ACCEL_PREFIX` for nginx to serve audio.
 
 ## Usage
+
+*(Describes the Flask app; updated as the rewrite reaches each feature.)*
+
 
 1. Log in with your configured password
 2. Create a playlist and give it a name
