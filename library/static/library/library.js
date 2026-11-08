@@ -64,11 +64,24 @@
                 group: kind,              // folders and playlists never mix
                 handle: ".handle",
                 animation: 150,
+                // Sortable's own drag (not the browser's): steadier with nested lists.
+                forceFallback: true,
                 fallbackOnBody: true,
+                fallbackTolerance: 3,
                 swapThreshold: 0.65,
-                emptyInsertThreshold: 12,
-                onStart: () => document.body.classList.add("dragging-" + kind),
-                onEnd: onDragEnd,
+                // Only react inside an empty folder's drop area, not near it, so
+                // neighbouring lists don't both claim the item.
+                emptyInsertThreshold: 0,
+                onStart: (evt) => {
+                    // A dragged folder shows only its own row, so the tree doesn't
+                    // jump by the size of its contents as it moves.
+                    evt.item.classList.add("is-dragged");
+                    document.body.classList.add("dragging-" + kind);
+                },
+                onEnd: (evt) => {
+                    evt.item.classList.remove("is-dragged");
+                    onDragEnd(evt);
+                },
             });
         });
         within(root, "#name-input").forEach((input) => { input.focus(); input.select(); });

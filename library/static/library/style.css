@@ -43,6 +43,10 @@ main { padding: 20px; max-width: 900px; }
 .row:hover .actions, .row:focus-within .actions { opacity: 1; }
 .actions button { font-size: 0.8em; padding: 2px 8px; }
 button.danger:hover { border-color: var(--error); color: var(--error); }
-/* While dragging, show where things can go, including empty folders. */
-body.dragging-folder ul.folders, body.dragging-playlist ul.playlists { min-height: 1.6em; outline: 1px dashed #555; outline-offset: -2px; border-radius: 4px; }
+/* While dragging, empty folders get a drop area the height of one row. Lists
+   that already have items keep their size, so nothing else moves. */
+body.dragging-folder ul.folders:not(:has(> li)),
+body.dragging-playlist ul.playlists:not(:has(> li)) { min-height: 27px; outline: 1px dashed #555; outline-offset: -2px; border-radius: 4px; }
+.is-dragged > .body { display: none; }
 .sortable-ghost { opacity: 0.4; }
+.sortable-fallback { opacity: 0.9; background: var(--panel); border-radius: 4px; }
