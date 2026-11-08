@@ -13,6 +13,7 @@ urlpatterns = [
     path("playlist/<int:pk>/order/", views.track_order, name="track_order"),
     path("playlist/<int:pk>/volume/", views.playlist_volume, name="volume"),
     path("track/<int:pk>/loop/", views.track_loop, name="track_loop"),
+    path("track/<int:pk>/rename/", views.track_rename, name="track_rename"),
     path("track/<int:pk>/delete/", views.track_delete, name="track_delete"),
     path("<str:kind>/new/", views.create, name="create"),
     path("<str:kind>/<int:pk>/rename/", views.rename, name="rename"),

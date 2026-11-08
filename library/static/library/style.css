@@ -73,3 +73,5 @@ body.dragging-playlist ul.playlists:not(:has(> li)) { min-height: 27px; outline:
 main:has(#player) { max-width: 1100px; }
 .tree a.name { color: var(--text); text-decoration: none; }
 .tree a.name:hover { color: var(--accent); text-decoration: underline; }
+.track .name-edit { flex: 1; min-width: 0; padding: 3px 6px; background: var(--bg); color: var(--text);
+                    border: 1px solid var(--accent); border-radius: 4px; font: inherit; }

@@ -270,6 +270,19 @@ def track_loop(request, pk: int):
 
 @login_required
 @require_POST
+def track_rename(request, pk: int):
+    """Display name only; the file on disk keeps its generated name."""
+    track = get_object_or_404(Track, pk=pk)
+    name, error = clean_name(request)
+    if error:
+        return HttpResponseBadRequest(error)
+    track.name = name
+    track.save(update_fields=["name"])
+    return HttpResponse(name, content_type="text/plain; charset=utf-8")
+
+
+@login_required
+@require_POST
 def track_delete(request, pk: int):
     get_object_or_404(Track, pk=pk).delete()   # the file goes too (models.py)
     return HttpResponse(status=204)

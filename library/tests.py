@@ -404,3 +404,28 @@ class PlayerTests(TempMediaMixin, TestCase):
         self.assertEqual(b"".join(resp.streaming_content), b"audio")
         self.assertEqual(self.client.get(url, headers={"Range": "bytes=50-"}).status_code, 416)
         self.assertEqual(self.client.get(url)["Accept-Ranges"], "bytes")
+
+
+class TrackRenameTests(TempMediaMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(get_user_model().objects.create_user("gm", password="a-long-test-password"))
+        self.track = self.make_track(Playlist.objects.create(name="P"), name="Taifu Loop.mp3")
+        self.url = reverse("library:track_rename", args=[self.track.pk])
+
+    def test_rename_changes_only_the_display_name(self):
+        before = self.track.file.name
+        resp = self.client.post(self.url, {"name": "  Gorman Rosa Phase 2  "})
+        self.assertEqual(resp.content.decode(), "Gorman Rosa Phase 2")
+        self.track.refresh_from_db()
+        self.assertEqual((self.track.name, self.track.file.name), ("Gorman Rosa Phase 2", before))
+        self.assertTrue(Path(self.track.file.path).exists())
+
+    def test_blank_name_is_refused(self):
+        self.assertEqual(self.client.post(self.url, {"name": "  "}).status_code, 400)
+        self.track.refresh_from_db()
+        self.assertEqual(self.track.name, "Taifu Loop.mp3")
+
+    def test_player_has_the_rename_button(self):
+        html = self.client.get(reverse("library:player", args=[self.track.playlist.pk])).content.decode()
+        self.assertIn('data-rename-url="%s"' % self.url, html)

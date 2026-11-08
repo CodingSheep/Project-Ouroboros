@@ -147,6 +147,8 @@
             seeking = false;
         });
 
+        li.querySelector(".rename").addEventListener("click", () => rename(li));
+
         li.querySelector(".remove").addEventListener("click", () => {
             const name = li.querySelector(".name").textContent;
             if (!confirm("Remove “" + name + "”? Its audio file is deleted too.")) return;
@@ -159,6 +161,44 @@
                 say("Removed " + name);
             }, () => {});
         });
+    }
+
+    // Rename: the name turns into a text box. Enter saves, Esc or clicking away cancels.
+    function rename(li) {
+        const label = li.querySelector(".name");
+        if (li.querySelector(".name-edit")) return;
+        const input = document.createElement("input");
+        input.className = "name-edit";
+        input.maxLength = 200;
+        input.value = label.textContent;
+        input.setAttribute("aria-label", "Track name");
+        label.hidden = true;
+        label.after(input);
+        input.focus();
+        input.select();
+
+        let done = false;
+        const close = () => {
+            done = true;
+            input.remove();
+            label.hidden = false;
+        };
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") { close(); return; }
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            const name = input.value.trim();
+            if (!name || name === label.textContent) { close(); return; }
+            input.disabled = true;
+            post(li.dataset.renameUrl, { name }).then(async (resp) => {
+                const saved = await resp.text();
+                label.textContent = saved;
+                label.title = saved;
+                close();
+                say("Saved");
+            }, () => { input.disabled = false; input.focus(); });
+        });
+        input.addEventListener("blur", () => { if (!done && !input.disabled) close(); });
     }
 
     list.querySelectorAll("li.track").forEach(wire);
