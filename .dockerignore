@@ -1,0 +1,8 @@
+.git
+.env
+data/
+staticfiles/
+# Old app's data (kept until the cutover; the import reads it through the mount)
+static/uploads/
+playlists.json
+**/__pycache__

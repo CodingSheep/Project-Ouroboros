@@ -3,8 +3,10 @@ networks:
     external: true
 
 services:
+  # The old Flask app (branch archive/flask). Still serves music.<domain> until
+  # the cutover. Runs from its saved image; nothing here rebuilds it.
   music-player:
-    build: .
+    image: project-ouroboros:flask-legacy
     container_name: music-player
     restart: unless-stopped
     expose:
@@ -17,3 +19,21 @@ services:
       - ./playlists.json:/app/playlists.json
     networks:
       - foundry-net
+
+  # The Django rewrite, during development: http://localhost:8001 (this machine only).
+  # The code is mounted, so edits apply without a rebuild (runserver reloads).
+  music-next:
+    build: .
+    image: project-ouroboros:dev
+    container_name: music-next
+    restart: unless-stopped
+    user: "1000:1000"
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "127.0.0.1:8001:8000"
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_DEBUG=1
+      - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+    volumes:
+      - .:/app

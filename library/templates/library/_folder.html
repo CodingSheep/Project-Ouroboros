@@ -1,0 +1,9 @@
+<li class="folder">
+    <details open>
+        <summary>{{ node.folder.name }}</summary>
+        <ul>
+            {% for node in node.children %}{% include "library/_folder.html" %}{% endfor %}
+            {% for p in node.playlists %}<li class="playlist">{{ p.name }} <span class="count">{{ p.track_count }} tracks</span></li>{% endfor %}
+        </ul>
+    </details>
+</li>

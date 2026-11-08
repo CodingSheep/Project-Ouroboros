@@ -24,10 +24,36 @@ This allows pre-edited audio files (e.g. fight intro → fight loop → fight en
 
 ## Tech Stack
 
-- **Python 3.13** with [Flask](https://flask.palletsprojects.com/)
-- Vanilla JavaScript (no framework) for drag-sort, sequential playback, and loop logic
-- JSON file for playlist persistence, local filesystem for audio storage
-- Runs as a Docker container behind an nginx reverse proxy with Let's Encrypt HTTPS (This is not neccesary for personal setups. This is just what I use.)
+> **Rewrite in progress.** `main` is being rebuilt on Django (see Status below). The original Flask app lives on the [`archive/flask`](../../tree/archive/flask) branch and still runs in production until the new version replaces it.
+
+- **Python 3.13** with [Django](https://www.djangoproject.com/) 6.1
+- **SQLite** for folders, playlists and tracks; audio files stay on disk under generated names
+- Django templates, [htmx](https://htmx.org/) and [SortableJS](https://sortablejs.github.io/Sortable/) for the UI (no JavaScript build step)
+- gunicorn + whitenoise in production, behind nginx; nginx sends the audio files (`X-Accel-Redirect`) after Django checks the login
+
+## Status
+
+| Phase | |
+|---|---|
+| 1. Foundation: models (nested folders, playlists, tracks), admin, login, protected audio | ✅ |
+| 2. Import from the Flask app's `playlists.json` + uploads | ⏳ |
+| 3. Library page: folder tree, drag to reorder/move | ⏳ |
+| 4. Player page | ⏳ |
+| 5. Cutover to production | ⏳ |
+
+## Development
+
+```bash
+cp .env.example .env            # then set DJANGO_SECRET_KEY
+mkdir -p data
+docker compose build music-next
+docker compose run --rm music-next python manage.py migrate
+docker compose run --rm music-next python manage.py createsuperuser
+docker compose up -d music-next  # http://localhost:8001
+docker compose run --rm music-next python manage.py test
+```
+
+Data lives in `data/` (`db.sqlite3`, `media/`), which is not in git.
 
 ## Project Structure
 

@@ -1,7 +1,10 @@
 # Environment & secrets
 .env
 
-# User data (never commit uploads or playlist state)
+# User data (never commit audio, the database or playlist state)
+data/
+staticfiles/
+# Old app's data, kept until the cutover
 playlists.json
 static/uploads/
 

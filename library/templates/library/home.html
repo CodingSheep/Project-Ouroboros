@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Library</h1>
+<p class="note">Read-only for now: the drag-and-drop library page comes in phase 3. Use <a href="{% url 'admin:index' %}">Admin</a> to add or edit.</p>
+{% if not folders and not loose %}<p>Nothing here yet.</p>{% endif %}
+<ul class="tree">
+    {% for node in folders %}{% include "library/_folder.html" %}{% endfor %}
+    {% for p in loose %}<li class="playlist">{{ p.name }} <span class="count">{{ p.track_count }} tracks</span></li>{% endfor %}
+</ul>
+{% endblock %}

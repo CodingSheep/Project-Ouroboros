@@ -1,0 +1,20 @@
+:root { --bg: #1e1f22; --panel: #2b2d31; --text: #e6e6e6; --muted: #9aa0a6; --accent: #66d7ff; --error: #ff6b6b; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
+a { color: var(--accent); }
+button { background: var(--panel); color: var(--text); border: 1px solid #444; border-radius: 4px; padding: 4px 10px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background: var(--panel); }
+.topbar .brand { color: var(--text); font-weight: 600; text-decoration: none; }
+.topbar nav { display: flex; gap: 12px; align-items: center; }
+.topbar form { margin: 0; }
+main { padding: 20px; max-width: 900px; }
+.note { color: var(--muted); }
+.error { color: var(--error); }
+.login { display: flex; flex-direction: column; gap: 10px; max-width: 320px; }
+.login input { width: 100%; padding: 6px; background: var(--panel); color: var(--text); border: 1px solid #444; border-radius: 4px; }
+.tree, .tree ul { list-style: none; padding-left: 18px; }
+.tree > li { margin: 4px 0; }
+.tree summary { cursor: pointer; font-weight: 600; }
+.tree .playlist { padding: 2px 0; }
+.tree .count { color: var(--muted); font-size: 0.85em; margin-left: 6px; }
