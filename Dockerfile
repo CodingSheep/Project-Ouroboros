@@ -13,4 +13,6 @@ RUN DJANGO_SECRET_KEY=build python manage.py collectstatic --noinput
 
 USER 1000:1000
 EXPOSE 8000
-CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "120", "--access-logfile", "-"]
+# Apply any new database migrations, then serve. nginx buffers uploads, so
+# 2 workers are plenty for one user.
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 2 --timeout 120 --no-control-socket --access-logfile -"]

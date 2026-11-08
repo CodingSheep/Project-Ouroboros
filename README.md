@@ -24,7 +24,7 @@ This allows pre-edited audio files (e.g. fight intro → fight loop → fight en
 
 ## Tech Stack
 
-> **Rewrite in progress.** `main` is being rebuilt on Django (see Status below). The original Flask app lives on the [`archive/flask`](../../tree/archive/flask) branch and still runs in production until the new version replaces it.
+> `main` is the Django rewrite. The original Flask app is on the [`archive/flask`](../../tree/archive/flask) branch.
 
 - **Python 3.13** with [Django](https://www.djangoproject.com/) 6.1
 - **SQLite** for folders, playlists and tracks; audio files stay on disk under generated names
@@ -39,25 +39,24 @@ This allows pre-edited audio files (e.g. fight intro → fight loop → fight en
 | 2. Import from the Flask app's `playlists.json` + uploads | ✅ |
 | 3. Library page: folder tree, create/rename/delete, drag to reorder/move | ✅ |
 | 4. Player page: playback, Repeat, volume, uploads, all saved as you go | ✅ |
-| 5. Cutover to production | ⏳ |
+| 5. Cutover to production | ✅ |
 
 ## Development
 
 ```bash
-cp .env.example .env            # then set DJANGO_SECRET_KEY
-mkdir -p data
-docker compose build music-next
-docker compose run --rm music-next python manage.py migrate
-docker compose run --rm music-next python manage.py createsuperuser
-docker compose up -d music-next  # http://localhost:8001
-docker compose run --rm music-next python manage.py import_flask          # show what the import would do
-docker compose run --rm music-next python manage.py import_flask --apply  # import playlists.json + static/uploads
-docker compose run --rm music-next python manage.py test
+cp .env.example .env                                   # then set DJANGO_SECRET_KEY
+docker compose --profile dev up -d --build music-dev   # http://localhost:8001, data in dev-data/
+docker compose run --rm music-dev python manage.py createsuperuser
+docker compose run --rm music-dev python manage.py test
+docker compose run --rm music-dev python manage.py import_flask          # show what the import would do
+docker compose run --rm music-dev python manage.py import_flask --apply  # import playlists.json + static/uploads
 ```
+
+The dev container mounts the code (edits apply without a rebuild) and keeps its own data in `dev-data/`.
 
 The import turns "Campaign - Playlist" names into a Campaign folder, copies the audio (originals untouched), and skips playlists already imported, so it's safe to run again.
 
-Data lives in `data/` (`db.sqlite3`, `media/`), which is not in git.
+The live app's data lives in `data/` (`db.sqlite3`, `media/`), which is not in git.
 
 ## Project Structure
 
@@ -73,12 +72,23 @@ library/                # The app
   tests.py
 templates/              # base.html, login page
 data/                   # db.sqlite3 + media/ (gitignored)
-compose.yaml            # music-next (Django, dev) + music-player (old Flask app until cutover)
+compose.yaml            # music-player (live, gunicorn) + music-dev (development, profile "dev")
 ```
 
 ## Deployment
 
-Runs as a Docker container behind an nginx reverse proxy (gunicorn, whitenoise for CSS/JS). `data/` is mounted as a volume and isn't in this repository. Production settings come from environment variables: `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, and `MEDIA_ACCEL_PREFIX` for nginx to serve audio.
+`docker compose up -d --build music-player` runs gunicorn on port 8000 (migrations are applied on start; whitenoise serves CSS/JS) behind an nginx reverse proxy. `data/` is mounted as a volume and isn't in this repository. Settings come from environment variables: `DJANGO_SECRET_KEY` (in `.env`), and in `compose.yaml` `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS` and `MEDIA_ACCEL_PREFIX`.
+
+Audio is never served without a login: Django checks it, then answers with `X-Accel-Redirect: /protected-media/<file>`, and nginx sends the file from an `internal` location:
+
+```nginx
+location /protected-media/ {
+    internal;
+    alias /music-media/;   # data/media, mounted read-only into nginx
+}
+```
+
+Back up `data/media` plus a copy of `db.sqlite3` made with SQLite's backup API (for example `sqlite3 data/db.sqlite3 ".backup copy.sqlite3"`); copying the live file while the app runs can give a broken copy.
 
 ## Usage
 

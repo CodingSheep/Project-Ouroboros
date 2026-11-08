@@ -3,37 +3,48 @@ networks:
     external: true
 
 services:
-  # The old Flask app (branch archive/flask). Still serves music.<domain> until
-  # the cutover. Runs from its saved image; nothing here rebuilds it.
+  # music.<domain>, behind nginx-proxy (foundry project). nginx sends the audio
+  # files itself (X-Accel-Redirect to /protected-media/) after Django checks the
+  # login. Data: ./data (db.sqlite3 + media/), backed up by server-backup.sh.
   music-player:
-    image: project-ouroboros:flask-legacy
+    build: .
+    image: project-ouroboros:latest
     container_name: music-player
     restart: unless-stopped
     expose:
-      - "5000"
+      - "8000"
     environment:
-      - MUSIC_APP_PASSWORD=${MUSIC_APP_PASSWORD}
-      - FLASK_SECRET_KEY=${FLASK_SECRET_KEY}
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DJANGO_ALLOWED_HOSTS=music.tales-from-the-nexus.com,localhost
+      - DJANGO_CSRF_TRUSTED_ORIGINS=https://music.tales-from-the-nexus.com
+      - MEDIA_ACCEL_PREFIX=/protected-media/
     volumes:
-      - ./static/uploads:/app/static/uploads
-      - ./playlists.json:/app/playlists.json
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/login/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
     networks:
       - foundry-net
 
-  # The Django rewrite, during development: http://localhost:8001 (this machine only).
-  # The code is mounted, so edits apply without a rebuild (runserver reloads).
-  music-next:
+  # Development only: docker compose --profile dev up -d music-dev
+  # http://localhost:8001 (this machine only). Code is mounted, so edits apply
+  # without a rebuild. Its own data in ./dev-data, never the live library.
+  music-dev:
+    profiles: ["dev"]
     build: .
-    image: project-ouroboros:dev
-    container_name: music-next
-    restart: unless-stopped
+    image: project-ouroboros:latest
+    container_name: music-dev
     user: "1000:1000"
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py migrate --noinput && exec python manage.py runserver 0.0.0.0:8000"
     ports:
       - "127.0.0.1:8001:8000"
     environment:
       - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
       - DJANGO_DEBUG=1
       - DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
+      - DATA_DIR=/app/dev-data
     volumes:
       - .:/app

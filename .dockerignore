@@ -1,8 +1,9 @@
 .git
 .env
 data/
+dev-data/
 staticfiles/
-# Old app's data (kept until the cutover; the import reads it through the mount)
+# Old app's data (kept until the new app is verified; import_flask reads it)
 static/uploads/
 playlists.json
 **/__pycache__

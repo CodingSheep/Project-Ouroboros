@@ -3,8 +3,9 @@
 
 # User data (never commit audio, the database or playlist state)
 data/
+dev-data/
 staticfiles/
-# Old app's data, kept until the cutover
+# Old app's data, kept until the new app is verified
 playlists.json
 static/uploads/
 

@@ -12,12 +12,14 @@ from .models import Folder, Playlist, Track
 
 
 class TempMediaMixin:
-    """Each test gets its own empty MEDIA_ROOT."""
+    """Each test gets its own empty MEDIA_ROOT, and Django sends audio itself
+    (tests that want nginx's X-Accel-Redirect turn it on), whatever the
+    container's environment says."""
 
     def setUp(self):
         super().setUp()
         self.media_root = tempfile.mkdtemp()
-        self.media_override = override_settings(MEDIA_ROOT=self.media_root)
+        self.media_override = override_settings(MEDIA_ROOT=self.media_root, MEDIA_ACCEL_PREFIX="")
         self.media_override.enable()
 
     def tearDown(self):
